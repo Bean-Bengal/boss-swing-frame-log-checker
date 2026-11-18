@@ -1,0 +1,61 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Boss Swing Frame Log Checker</title>
+<style>
+body{font-family:system-ui,sans-serif;margin:0;padding:12px;background:#f6f1e7;color:#2a2622}
+h1{font-size:1.3rem;margin:0 0 8px}
+#banner{padding:10px;border-radius:8px;font-weight:bold;margin:8px 0;color:#fff}
+.ok{background:#2f7d4f}.bad{background:#b3382c}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:420px;background:#fff}
+th,td{border:1px solid #cfc6b4;padding:6px 8px;text-align:left}
+th{background:#e9dfc9}
+tr.fail td{background:#f6d4cf}
+td.p{color:#2f7d4f;font-weight:bold}td.f{color:#b3382c;font-weight:bold}
+form{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+input{width:5.5em;padding:5px}input.n{width:9em}
+button{padding:6px 12px}
+small{display:block;margin-top:8px}
+</style></head><body>
+<script data-bean-store>(function(){if(typeof location!=='undefined'&&location&&location.protocol==='about:'&&typeof document!=='undefined'&&document.addEventListener){document.addEventListener('click',function(e){var a=e.target&&e.target.closest&&e.target.closest('a[href^="#"]');if(!a||a.target==='_blank')return;e.preventDefault();try{location.hash=a.getAttribute('href')}catch(x){}},true)}if(typeof window==='undefined')return;try{window.localStorage.getItem('x');return}catch(e){}var d=Object.assign({},window.__BEAN_SAVED||{});function post(){try{parent.postMessage({type:'bean-store',data:d},'*')}catch(e){}}var ls={getItem:function(k){return Object.prototype.hasOwnProperty.call(d,k)?d[k]:null},setItem:function(k,v){d[k]=String(v);post()},removeItem:function(k){delete d[k];post()},clear:function(){d={};post()},key:function(i){return Object.keys(d)[i]||null}};Object.defineProperty(ls,'length',{get:function(){return Object.keys(d).length}});try{Object.defineProperty(window,'localStorage',{value:ls,configurable:true})}catch(e){}})();</script>
+<h1>Boss Swing Frame Log Checker</h1>
+<div id="banner">checking…</div>
+<form id="f"><input class="n" id="n" placeholder="swing name" required><input id="s" type="number" placeholder="start" required><input id="h" type="number" placeholder="hit" required><input id="c" type="number" placeholder="logged" required><button>Add</button></form>
+<div class="wrap"><table><thead><tr><th>Swing</th><th>Start</th><th>Hit</th><th>Logged</th><th>Worked</th><th>Check</th></tr></thead><tbody id="rows"></tbody></table></div>
+<small>Worked value = hit frame minus start frame. Both ends of the swing count, so the first frame is start itself and the number of frames to impact is hit minus start.</small>
+<script>
+function workedCount(s,h){return h-s}
+function brokenCount(s,h){return h-s+1}
+function checkWith(fn,e){return fn(e.s,e.h)===e.c}
+var KEY='bossSwingLog';
+var seed=[{n:'Sweep, left claw',s:12,h:30,c:18},{n:'Overhead slam',s:5,h:41,c:36},{n:'Lunge bite',s:20,h:29,c:9},{n:'Tail whip (typo)',s:8,h:27,c:20}];
+function load(){try{var d=JSON.parse(localStorage.getItem(KEY));if(d&&d.length)return d}catch(x){}return seed.slice()}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(log))}catch(x){}}
+var log=load();
+function selfTest(){
+ var known=[{s:10,h:25,c:15},{s:0,h:1,c:1},{s:7,h:7,c:0}];
+ var realOk=known.every(function(e){return checkWith(workedCount,e)});
+ var twinRejected=known.every(function(e){return !checkWith(brokenCount,e)});
+ var wrongCaught=!checkWith(workedCount,{s:10,h:25,c:14})&&!checkWith(workedCount,{s:10,h:25,c:16});
+ return {realOk:realOk,twinRejected:twinRejected,wrongCaught:wrongCaught,all:realOk&&twinRejected&&wrongCaught};
+}
+function render(){
+ var t=selfTest(),b=document.getElementById('banner');
+ b.className=t.all?'ok':'bad';
+ var bad=log.filter(function(e){return !checkWith(workedCount,e)}).length;
+ b.textContent=(t.all?'Self-test passed (broken twin rejected). ':'SELF-TEST FAILED: '+JSON.stringify(t)+' ')+log.length+' entries, '+bad+' mismatched.';
+ var tb=document.getElementById('rows');tb.innerHTML='';
+ log.forEach(function(e){
+  var ok=checkWith(workedCount,e),tr=document.createElement('tr');
+  if(!ok)tr.className='fail';
+  [e.n,e.s,e.h,e.c,workedCount(e.s,e.h)].forEach(function(v){var td=document.createElement('td');td.textContent=v;tr.appendChild(td)});
+  var td=document.createElement('td');td.className=ok?'p':'f';td.textContent=ok?'pass':'FAIL';tr.appendChild(td);
+  tb.appendChild(tr);
+ });
+}
+document.getElementById('f').onsubmit=function(ev){
+ ev.preventDefault();
+ var g=function(i){return document.getElementById(i).value};
+ log.push({n:g('n'),s:+g('s'),h:+g('h'),c:+g('c')});
+ save();ev.target.reset();render();
+};
+render();
+</script></body></html>
